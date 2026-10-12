@@ -1,0 +1,73 @@
+# Opik's frontend image ships nginx without a server block: upstream compose
+# mounts deployment/docker-compose/nginx_default_local.conf here. This is that
+# file with Railway changes: the backend address comes from the environment
+# (resolver: the stock 15-local-resolvers.envsh), nginx listens on IPv6 too,
+# the OAuth routes for the off-by-default MCP OAuth server are left out, and
+# the whole site sits behind basic auth because self-hosted Opik has no login.
+client_max_body_size 2G;
+client_header_buffer_size 16k;
+large_client_header_buffers 4 64k;
+
+# Re-resolve the backend's private domain while running, so a backend
+# redeploy never leaves nginx pointing at a dead address.
+resolver ${NGINX_LOCAL_RESOLVERS} valid=10s ipv6=off;
+resolver_timeout 2s;
+
+upstream backend {
+    zone backend 64k;
+    server ${OPIK_BACKEND_ADDRESS} resolve;
+    keepalive 16;
+}
+
+# Browsers send basic auth; the Opik SDK sends OPIK_API_KEY verbatim as the
+# Authorization header, so the bare password is accepted as an API key too.
+map $http_authorization $opik_auth {
+    default ${OPIK_AUTH_REALM};
+    "${OPIK_AUTH_PASSWORD}" off;
+}
+
+map $http_x_forwarded_proto $opik_proto {
+    default $http_x_forwarded_proto;
+    "" $scheme;
+}
+
+server {
+    listen ${NGINX_PORT} default_server;
+    listen [::]:${NGINX_PORT} default_server;
+    server_name _;
+    root /usr/share/nginx/html;
+    index index.html;
+
+    auth_basic $opik_auth;
+    auth_basic_user_file /etc/nginx/railway/htpasswd;
+
+    location /health {
+        auth_basic off;
+        add_header Content-Type text/plain;
+        access_log off;
+        otel_trace off;
+        return 200 "healthy\n";
+    }
+
+    location /api/ {
+        proxy_pass http://backend/;
+        proxy_set_header Authorization "";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $opik_proto;
+        proxy_read_timeout 90;
+        proxy_connect_timeout 90;
+        proxy_send_timeout 90;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+    }
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    add_header X-Trace-ID $otel_trace_id;
+    add_header X-Frame-Options "DENY" always;
+}

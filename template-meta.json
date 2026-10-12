@@ -1,0 +1,9 @@
+{
+  "name": "Opik | Open-Source LLM Evaluation, Tracing & Observability",
+  "short_name": "Opik LLM",
+  "description": "Trace, evaluate and monitor LLM apps and agents, behind basic auth",
+  "category": "Observability",
+  "image": "https://raw.githubusercontent.com/nomideusz/opik-railway/main/icon.svg",
+  "card_desc": "Opik by Comet: open-source LLM tracing, LLM-as-a-judge evaluation, datasets, experiments and prompt management, on ClickHouse with an embedded Keeper, MySQL, Redis and MinIO, behind basic auth.",
+  "deploy_marker": "ghcr.io/comet-ml/opik/opik-backend:2.2.96"
+}

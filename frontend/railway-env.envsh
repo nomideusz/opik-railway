@@ -1,0 +1,13 @@
+#!/bin/sh
+# Sourced by the nginx image's /docker-entrypoint.sh before it renders
+# /etc/nginx/templates, so the exports below reach default.conf.template.
+
+# Empty password = no auth (only sensible on a private network).
+if [ -n "${OPIK_AUTH_PASSWORD:-}" ]; then
+    printf '%s:{PLAIN}%s\n' "${OPIK_AUTH_USER:-opik}" "$OPIK_AUTH_PASSWORD" > /etc/nginx/railway/htpasswd
+    export OPIK_AUTH_REALM='"Opik"'
+else
+    echo "WARNING: OPIK_AUTH_PASSWORD is empty - Opik is open to anyone who can reach it"
+    : > /etc/nginx/railway/htpasswd
+    export OPIK_AUTH_REALM=off OPIK_AUTH_PASSWORD=
+fi

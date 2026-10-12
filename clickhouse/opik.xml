@@ -1,0 +1,66 @@
+<clickhouse>
+    <!-- Opik's migrations create Replicated*MergeTree tables and run ON CLUSTER
+         DDL, so ClickHouse needs a coordination service even on one node.
+         Upstream compose runs a separate ZooKeeper (a 512 MB JVM); here
+         ClickHouse Keeper runs inside clickhouse-server instead, with its log
+         and snapshots on the same volume as the data. -->
+    <keeper_server>
+        <tcp_port>9181</tcp_port>
+        <server_id>1</server_id>
+        <log_storage_path>/var/lib/clickhouse/coordination/log</log_storage_path>
+        <snapshot_storage_path>/var/lib/clickhouse/coordination/snapshots</snapshot_storage_path>
+        <coordination_settings>
+            <operation_timeout_ms>10000</operation_timeout_ms>
+            <session_timeout_ms>30000</session_timeout_ms>
+            <raft_logs_level>warning</raft_logs_level>
+        </coordination_settings>
+        <raft_configuration>
+            <server>
+                <id>1</id>
+                <hostname>localhost</hostname>
+                <port>9234</port>
+            </server>
+        </raft_configuration>
+    </keeper_server>
+    <zookeeper>
+        <node>
+            <host>localhost</host>
+            <port>9181</port>
+        </node>
+    </zookeeper>
+    <distributed_ddl>
+        <path>/clickhouse/task_queue/ddl</path>
+    </distributed_ddl>
+
+    <!-- From upstream deployment/docker-compose/clickhouse_config/additional_config.xml:
+         a one-shard, one-replica cluster named "cluster". The replica is this
+         server, reached as localhost so the config never depends on the
+         service's Railway hostname; credentials come from the service env. -->
+    <macros>
+        <shard>1</shard>
+        <replica>clickhouse</replica>
+        <cluster>cluster</cluster>
+    </macros>
+    <remote_servers>
+        <cluster>
+            <shard>
+                <internal_replication>true</internal_replication>
+                <replica>
+                    <host>localhost</host>
+                    <port>9000</port>
+                    <user from_env="CLICKHOUSE_USER"/>
+                    <password from_env="CLICKHOUSE_PASSWORD"/>
+                </replica>
+            </shard>
+        </cluster>
+    </remote_servers>
+
+    <custom_settings_prefixes>SQL_</custom_settings_prefixes>
+    <timezone>UTC</timezone>
+    <merge_tree>
+        <max_bytes_to_merge_at_max_space_in_pool>429496729600</max_bytes_to_merge_at_max_space_in_pool>
+        <min_age_to_force_merge_seconds>604800</min_age_to_force_merge_seconds>
+        <min_age_to_force_merge_on_partition_only>0</min_age_to_force_merge_on_partition_only>
+        <number_of_free_entries_in_pool_to_lower_max_size_of_merge>8</number_of_free_entries_in_pool_to_lower_max_size_of_merge>
+    </merge_tree>
+</clickhouse>

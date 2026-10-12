@@ -1,0 +1,387 @@
+{
+  "services": {
+    "e741c99f-64ef-41c5-8185-d4e2b4fd94f2": {
+      "icon": "https://raw.githubusercontent.com/nomideusz/opik-railway/main/icon.svg",
+      "name": "Opik",
+      "build": {},
+      "deploy": {
+        "startCommand": null,
+        "healthcheckPath": "/health",
+        "restartPolicyType": "ON_FAILURE",
+        "restartPolicyMaxRetries": 10
+      },
+      "source": {
+        "repo": "https://github.com/nomideusz/opik-railway",
+        "rootDirectory": "/frontend"
+      },
+      "networking": {
+        "serviceDomains": {}
+      },
+      "volumeMounts": {},
+      "variables": {
+        "PORT": {
+          "defaultValue": "5173",
+          "description": "Port nginx listens on - leave as is",
+          "isOptional": false
+        },
+        "NGINX_PORT": {
+          "defaultValue": "5173",
+          "description": "Port nginx listens on - must match PORT",
+          "isOptional": false
+        },
+        "OPIK_BACKEND_ADDRESS": {
+          "defaultValue": "${{Backend.RAILWAY_PRIVATE_DOMAIN}}:8080",
+          "description": "Backend API on the private network; nginx re-resolves it while running so backend redeploys never leave a stale address",
+          "isOptional": false
+        },
+        "OPIK_AUTH_USER": {
+          "defaultValue": "opik",
+          "description": "Basic-auth username for the Opik UI. Self-hosted Opik has no login of its own, so this gate is the only thing between the internet and your traces",
+          "isOptional": false
+        },
+        "OPIK_AUTH_PASSWORD": {
+          "defaultValue": "${{secret(32, \"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789\")}}",
+          "description": "Basic-auth password for the UI, and the API key for the SDK (OPIK_API_KEY=<this value>). Emptying it makes Opik open to anyone with the URL",
+          "isOptional": false
+        }
+      }
+    },
+    "f811389d-f0b9-46d1-b70b-dc57ee94d0ce": {
+      "icon": "https://raw.githubusercontent.com/nomideusz/opik-railway/main/icon.svg",
+      "name": "Backend",
+      "build": {},
+      "deploy": {
+        "startCommand": "/bin/bash -c \"until curl -sf http://$ANALYTICS_DB_HOST:$ANALYTICS_DB_PORT/ping >/dev/null && (: </dev/tcp/${STATE_DB_URL%%:*}/3306) 2>/dev/null; do echo Waiting for MySQL and ClickHouse; sleep 2; done; ./run_db_migrations.sh && exec java $JAVA_OPTS -jar opik-backend-$OPIK_VERSION.jar server config.yml\"",
+        "healthcheckPath": "/health-check",
+        "restartPolicyType": "ON_FAILURE",
+        "restartPolicyMaxRetries": 10
+      },
+      "source": {
+        "image": "ghcr.io/comet-ml/opik/opik-backend:2.2.96"
+      },
+      "networking": {
+        "serviceDomains": {}
+      },
+      "volumeMounts": {},
+      "variables": {
+        "PORT": {
+          "defaultValue": "8080",
+          "description": "Port the Opik API listens on - leave as is",
+          "isOptional": false
+        },
+        "JAVA_OPTS": {
+          "defaultValue": "-Dliquibase.propertySubstitutionEnabled=true -XX:+UseG1GC -Xmx768m",
+          "description": "JVM flags. -Xmx caps the heap (upstream sizes it from the container limit, which on Railway is the whole plan); raise it for heavy ingestion. The Liquibase flag is required",
+          "isOptional": false
+        },
+        "OPIK_ENCRYPTION_KEY": {
+          "defaultValue": "${{secret(32, \"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789\")}}",
+          "description": "Encrypts the LLM provider API keys you save in Opik (AES, must be 16, 24 or 32 characters). Upstream's default is public - never change it after saving keys",
+          "isOptional": false
+        },
+        "STATE_DB_PROTOCOL": {
+          "defaultValue": "jdbc:mysql://",
+          "description": "JDBC scheme for the state database",
+          "isOptional": false
+        },
+        "STATE_DB_URL": {
+          "defaultValue": "${{MySQL.RAILWAY_PRIVATE_DOMAIN}}:3306/${{MySQL.MYSQL_DATABASE}}?createDatabaseIfNotExist=true&rewriteBatchedStatements=true&connectionTimeZone=UTC&forceConnectionTimeZoneToSession=true",
+          "description": "MySQL (projects, datasets, prompts, experiments) on the private network",
+          "isOptional": false
+        },
+        "STATE_DB_DATABASE_NAME": {
+          "defaultValue": "${{MySQL.MYSQL_DATABASE}}",
+          "description": "MySQL database",
+          "isOptional": false
+        },
+        "STATE_DB_USER": {
+          "defaultValue": "${{MySQL.MYSQL_USER}}",
+          "description": "MySQL user",
+          "isOptional": false
+        },
+        "STATE_DB_PASS": {
+          "defaultValue": "${{MySQL.MYSQL_PASSWORD}}",
+          "description": "MySQL password",
+          "isOptional": false
+        },
+        "ANALYTICS_DB_MIGRATIONS_URL": {
+          "defaultValue": "jdbc:clickhouse://${{ClickHouse.RAILWAY_PRIVATE_DOMAIN}}:8123",
+          "description": "ClickHouse for the schema migrations that run on every boot",
+          "isOptional": false
+        },
+        "ANALYTICS_DB_MIGRATIONS_USER": {
+          "defaultValue": "${{ClickHouse.CLICKHOUSE_USER}}",
+          "description": "ClickHouse user",
+          "isOptional": false
+        },
+        "ANALYTICS_DB_MIGRATIONS_PASS": {
+          "defaultValue": "${{ClickHouse.CLICKHOUSE_PASSWORD}}",
+          "description": "ClickHouse password",
+          "isOptional": false
+        },
+        "ANALYTICS_DB_PROTOCOL": {
+          "defaultValue": "HTTP",
+          "description": "ClickHouse client protocol",
+          "isOptional": false
+        },
+        "ANALYTICS_DB_HOST": {
+          "defaultValue": "${{ClickHouse.RAILWAY_PRIVATE_DOMAIN}}",
+          "description": "ClickHouse (traces, spans, feedback scores) on the private network",
+          "isOptional": false
+        },
+        "ANALYTICS_DB_PORT": {
+          "defaultValue": "8123",
+          "description": "ClickHouse HTTP port",
+          "isOptional": false
+        },
+        "ANALYTICS_DB_DATABASE_NAME": {
+          "defaultValue": "${{ClickHouse.CLICKHOUSE_DB}}",
+          "description": "ClickHouse database",
+          "isOptional": false
+        },
+        "ANALYTICS_DB_USERNAME": {
+          "defaultValue": "${{ClickHouse.CLICKHOUSE_USER}}",
+          "description": "ClickHouse user",
+          "isOptional": false
+        },
+        "ANALYTICS_DB_PASS": {
+          "defaultValue": "${{ClickHouse.CLICKHOUSE_PASSWORD}}",
+          "description": "ClickHouse password",
+          "isOptional": false
+        },
+        "REDIS_URL": {
+          "defaultValue": "redis://:${{Redis.REDIS_PASSWORD}}@${{Redis.RAILWAY_PRIVATE_DOMAIN}}:6379/0",
+          "description": "Redis (locks, caches, online-scoring streams) on the private network",
+          "isOptional": false
+        },
+        "IS_MINIO": {
+          "defaultValue": "true",
+          "description": "Attachments go through the backend to the S3-compatible MinIO service, so object storage never needs a public URL",
+          "isOptional": false
+        },
+        "S3_URL": {
+          "defaultValue": "http://${{MinIO.RAILWAY_PRIVATE_DOMAIN}}:9000",
+          "description": "MinIO on the private network",
+          "isOptional": false
+        },
+        "S3_BUCKET": {
+          "defaultValue": "${{MinIO.MINIO_BUCKET}}",
+          "description": "Attachment bucket (created by the MinIO service on boot)",
+          "isOptional": false
+        },
+        "AWS_ACCESS_KEY_ID": {
+          "defaultValue": "${{MinIO.MINIO_ROOT_USER}}",
+          "description": "MinIO access key",
+          "isOptional": false
+        },
+        "AWS_SECRET_ACCESS_KEY": {
+          "defaultValue": "${{MinIO.MINIO_ROOT_PASSWORD}}",
+          "description": "MinIO secret key",
+          "isOptional": false
+        },
+        "OPIK_USAGE_REPORT_ENABLED": {
+          "defaultValue": "false",
+          "description": "Anonymous usage reports to Comet (upstream default is on)",
+          "isOptional": false
+        },
+        "LLM_PROVIDER_TOKEN_AUTH_DESTINATION_GUARD": {
+          "defaultValue": "relaxed",
+          "description": "Lets custom LLM providers point at private gateways, as in upstream's self-host compose",
+          "isOptional": false
+        },
+        "TOGGLE_PYTHON_EVALUATOR_ENABLED": {
+          "defaultValue": "false",
+          "description": "Python code metrics need upstream's separate python-backend service, which this template leaves out to save RAM. LLM-as-a-judge metrics work",
+          "isOptional": false
+        },
+        "TOGGLE_TRACE_THREAD_PYTHON_EVALUATOR_ENABLED": {
+          "defaultValue": "false",
+          "description": "Same as TOGGLE_PYTHON_EVALUATOR_ENABLED, for thread-level rules",
+          "isOptional": false
+        },
+        "TOGGLE_SPAN_USER_DEFINED_METRIC_PYTHON_ENABLED": {
+          "defaultValue": "false",
+          "description": "Same as TOGGLE_PYTHON_EVALUATOR_ENABLED, for span-level rules",
+          "isOptional": false
+        },
+        "TOGGLE_DEMO_DATA_ENABLED": {
+          "defaultValue": "false",
+          "description": "The demo-data generator also runs in python-backend; off so the UI does not wait for it",
+          "isOptional": false
+        },
+        "TOGGLE_WELCOME_WIZARD_ENABLED": {
+          "defaultValue": "true",
+          "description": "Show the first-run welcome dialog",
+          "isOptional": false
+        },
+        "RAILWAY_HEALTHCHECK_TIMEOUT_SEC": {
+          "defaultValue": "600",
+          "description": "Every boot runs the MySQL and ClickHouse migrations before the health check can pass",
+          "isOptional": false
+        }
+      }
+    },
+    "e7cd5373-3e9a-49bd-b2ce-de5435805d9a": {
+      "icon": "https://devicons.railway.app/i/clickhouse.svg",
+      "name": "ClickHouse",
+      "build": {},
+      "deploy": {
+        "startCommand": null,
+        "healthcheckPath": null,
+        "restartPolicyType": "ON_FAILURE",
+        "restartPolicyMaxRetries": 10
+      },
+      "source": {
+        "repo": "https://github.com/nomideusz/opik-railway",
+        "rootDirectory": "/clickhouse"
+      },
+      "networking": {
+        "serviceDomains": {}
+      },
+      "volumeMounts": {
+        "bfb450c2-7cba-4699-8ceb-1eccb5c5d2fb": {
+          "mountPath": "/var/lib/clickhouse"
+        }
+      },
+      "variables": {
+        "CLICKHOUSE_DB": {
+          "defaultValue": "opik",
+          "description": "ClickHouse database",
+          "isOptional": false
+        },
+        "CLICKHOUSE_USER": {
+          "defaultValue": "opik",
+          "description": "ClickHouse user",
+          "isOptional": false
+        },
+        "CLICKHOUSE_PASSWORD": {
+          "defaultValue": "${{secret(32, \"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789\")}}",
+          "description": "Auto-generated ClickHouse password",
+          "isOptional": false
+        },
+        "RAILWAY_DEPLOYMENT_DRAINING_SECONDS": {
+          "defaultValue": "30",
+          "description": "Time for ClickHouse to flush and shut down cleanly on redeploy",
+          "isOptional": false
+        }
+      }
+    },
+    "69b997af-d232-44bc-a19e-c39359f2126d": {
+      "icon": "https://devicons.railway.app/i/mysql.svg",
+      "name": "MySQL",
+      "build": {},
+      "deploy": {
+        "startCommand": "docker-entrypoint.sh mysqld --datadir=/var/lib/mysql/data --skip-log-bin --performance-schema=OFF",
+        "healthcheckPath": null,
+        "restartPolicyType": "ON_FAILURE",
+        "restartPolicyMaxRetries": 10
+      },
+      "source": {
+        "image": "mysql:8.4.2"
+      },
+      "networking": {
+        "serviceDomains": {}
+      },
+      "volumeMounts": {
+        "493d2ace-ff5e-4120-9cd4-1b143c466173": {
+          "mountPath": "/var/lib/mysql"
+        }
+      },
+      "variables": {
+        "MYSQL_ROOT_PASSWORD": {
+          "defaultValue": "${{secret(32, \"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789\")}}",
+          "description": "Auto-generated MySQL root password",
+          "isOptional": false
+        },
+        "MYSQL_DATABASE": {
+          "defaultValue": "opik",
+          "description": "Database created on first boot",
+          "isOptional": false
+        },
+        "MYSQL_USER": {
+          "defaultValue": "opik",
+          "description": "Application user created on first boot",
+          "isOptional": false
+        },
+        "MYSQL_PASSWORD": {
+          "defaultValue": "${{secret(32, \"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789\")}}",
+          "description": "Auto-generated application password",
+          "isOptional": false
+        },
+        "RAILWAY_DEPLOYMENT_DRAINING_SECONDS": {
+          "defaultValue": "60",
+          "description": "Time for MySQL to shut down cleanly on redeploy",
+          "isOptional": false
+        }
+      }
+    },
+    "dd796e09-a162-4552-9f01-515ebd975ff4": {
+      "icon": "https://devicons.railway.app/i/redis.svg",
+      "name": "Redis",
+      "build": {},
+      "deploy": {
+        "startCommand": "/bin/sh -c \"chown -R redis:redis /data && exec docker-entrypoint.sh redis-server --requirepass $REDIS_PASSWORD --appendonly yes\"",
+        "healthcheckPath": null,
+        "restartPolicyType": "ON_FAILURE",
+        "restartPolicyMaxRetries": 10
+      },
+      "source": {
+        "image": "redis:8.10.2-alpine"
+      },
+      "networking": {
+        "serviceDomains": {}
+      },
+      "volumeMounts": {
+        "bfe64cc1-4ab7-4fa8-ba42-167958e63ab8": {
+          "mountPath": "/data"
+        }
+      },
+      "variables": {
+        "REDIS_PASSWORD": {
+          "defaultValue": "${{secret(32, \"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789\")}}",
+          "description": "Auto-generated Redis password",
+          "isOptional": false
+        }
+      }
+    },
+    "cfbdcf08-6782-4b3a-b1f7-bf8e552c7e40": {
+      "icon": "https://devicons.railway.app/i/minio.svg",
+      "name": "MinIO",
+      "build": {},
+      "deploy": {
+        "startCommand": "/bin/bash -c \"(until mc alias set local http://127.0.0.1:9000 $MINIO_ROOT_USER $MINIO_ROOT_PASSWORD >/dev/null 2>&1; do sleep 1; done; mc mb --ignore-existing local/$MINIO_BUCKET) & exec /usr/bin/docker-entrypoint.sh server /data --address :9000 --console-address :9001\"",
+        "healthcheckPath": null,
+        "restartPolicyType": "ON_FAILURE",
+        "restartPolicyMaxRetries": 10
+      },
+      "source": {
+        "image": "pgsty/silo:RELEASE.2026-08-06T00-00-00Z"
+      },
+      "networking": {
+        "serviceDomains": {}
+      },
+      "volumeMounts": {
+        "f46138ed-c86d-4002-9579-5ffd8cb0d23e": {
+          "mountPath": "/data"
+        }
+      },
+      "variables": {
+        "MINIO_ROOT_USER": {
+          "defaultValue": "opik",
+          "description": "MinIO access key",
+          "isOptional": false
+        },
+        "MINIO_ROOT_PASSWORD": {
+          "defaultValue": "${{secret(32, \"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789\")}}",
+          "description": "Auto-generated MinIO secret key",
+          "isOptional": false
+        },
+        "MINIO_BUCKET": {
+          "defaultValue": "opik",
+          "description": "Bucket for trace attachments, created on boot",
+          "isOptional": false
+        }
+      }
+    }
+  }
+}

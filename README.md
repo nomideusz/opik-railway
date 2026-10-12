@@ -57,7 +57,7 @@ Then decorate a function with `@opik.track` (or use any of the OpenAI, Anthropic
 
 **What is left out.** Upstream's `python-backend` runs user-written Python code metrics, the Optimization Studio and the demo-data generator. It is not part of this template, to keep the stack smaller, and those features are switched off with the `TOGGLE_*` variables on the Backend. Tracing, datasets, experiments, prompts, dashboards, alerts and LLM-as-a-judge rules all work without it, and evaluations you run from the SDK (`opik.evaluate`) run on your own machine. The GPU-sized guardrails service and the OpenTelemetry collector are also left out.
 
-**Resources.** Measured on Railway after a test deploy settled: about 1.8 GB for the whole stack at idle (ClickHouse 0.7 GB, backend 610 MB, MySQL 280 MB, nginx 105 MB, MinIO 90 MB, Redis 18 MB). The Java backend's heap is capped at 768 MB with `-Xmx` in `JAVA_OPTS` (raise it for heavy ingestion). It needs the Hobby plan or higher; it will not fit the Trial plan's 512 MB per service.
+**Resources.** Measured on Railway after a test deploy settled: about 1.7 GB for the whole stack at idle (ClickHouse 0.5 to 0.7 GB, backend 650 MB, MySQL 285 MB, nginx 105 MB, MinIO 90 MB, Redis 18 MB). The Java backend's heap is capped at 768 MB with `-Xmx` in `JAVA_OPTS` (raise it for heavy ingestion). It needs the Hobby plan or higher; it will not fit the Trial plan's 512 MB per service.
 
 **Back up the volumes.** ClickHouse (`/var/lib/clickhouse`, traces and the Keeper state) and MySQL (`/var/lib/mysql`, projects, datasets and prompts) hold the data that matters. MinIO holds attachments.
 

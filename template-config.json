@@ -15,7 +15,9 @@
         "rootDirectory": "/frontend"
       },
       "networking": {
-        "serviceDomains": {}
+        "serviceDomains": {
+          "<hasDomain>": {}
+        }
       },
       "volumeMounts": {},
       "variables": {

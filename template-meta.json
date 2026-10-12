@@ -5,5 +5,6 @@
   "category": "Observability",
   "image": "https://raw.githubusercontent.com/nomideusz/opik-railway/main/icon.svg",
   "card_desc": "Opik by Comet: open-source LLM tracing, LLM-as-a-judge evaluation, datasets, experiments and prompt management, on ClickHouse with an embedded Keeper, MySQL, Redis and MinIO, behind basic auth.",
-  "deploy_marker": "ghcr.io/comet-ml/opik/opik-backend:2.2.96"
+  "deploy_marker": "ghcr.io/comet-ml/opik/opik-backend:2.2.96",
+  "id": "639a84b1-6681-4ae0-8b2e-c802fa5146e8"
 }

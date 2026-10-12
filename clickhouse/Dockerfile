@@ -12,6 +12,10 @@ COPY railway.xml /etc/clickhouse-server/config.d/railway.xml
 COPY listen.xml /etc/clickhouse-server/config.d/docker_related_config.xml
 COPY users.xml /etc/clickhouse-server/users.d/opik.xml
 
+# Railway hosts run transparent huge pages "always": jemalloc frees 4K pages
+# inside 2 MB huge pages that stay charged, so idle ClickHouse crept from
+# ~0.5 GB past 1.9 GB in 30 minutes. thp:never keeps it near 0.6 GB.
 ENV CLICKHOUSE_DB=opik \
     CLICKHOUSE_USER=opik \
-    CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT=1
+    CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT=1 \
+    MALLOC_CONF=thp:never

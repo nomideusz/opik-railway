@@ -36,7 +36,7 @@ Every password, plus Opik's encryption key for saved LLM provider keys, is gener
 - [Opik self-hosting documentation](https://www.comet.com/docs/opik/self-host/overview)
 - [Opik on GitHub](https://github.com/comet-ml/opik)
 - [Opik Python SDK](https://pypi.org/project/opik/)
-- [Template source on GitHub](https://github.com/nomideusz/opik-railway)
+- [Template source on GitHub](https://github.com/two-workspaces/opik)
 
 ### Implementation Details
 

@@ -1,7 +1,7 @@
 {
   "services": {
     "e741c99f-64ef-41c5-8185-d4e2b4fd94f2": {
-      "icon": "https://raw.githubusercontent.com/nomideusz/opik-railway/main/icon.svg",
+      "icon": "https://raw.githubusercontent.com/two-workspaces/opik/main/icon.svg",
       "name": "Opik",
       "build": {},
       "deploy": {
@@ -11,7 +11,7 @@
         "restartPolicyMaxRetries": 10
       },
       "source": {
-        "repo": "https://github.com/nomideusz/opik-railway",
+        "repo": "https://github.com/two-workspaces/opik",
         "rootDirectory": "/frontend"
       },
       "networking": {
@@ -49,7 +49,7 @@
       }
     },
     "f811389d-f0b9-46d1-b70b-dc57ee94d0ce": {
-      "icon": "https://raw.githubusercontent.com/nomideusz/opik-railway/main/icon.svg",
+      "icon": "https://raw.githubusercontent.com/two-workspaces/opik/main/icon.svg",
       "name": "Backend",
       "build": {},
       "deploy": {
@@ -234,7 +234,7 @@
         "restartPolicyMaxRetries": 10
       },
       "source": {
-        "repo": "https://github.com/nomideusz/opik-railway",
+        "repo": "https://github.com/two-workspaces/opik",
         "rootDirectory": "/clickhouse"
       },
       "networking": {
